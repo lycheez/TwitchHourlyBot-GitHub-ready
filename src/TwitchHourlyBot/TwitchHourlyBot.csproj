@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>TwitchHourlyBot</AssemblyName>
+    <RootNamespace>TwitchHourlyBot</RootNamespace>
+    <EnableDefaultApplicationDefinition>false</EnableDefaultApplicationDefinition>
+    <EnableDefaultPageItems>false</EnableDefaultPageItems>
+    <ApplicationIcon>Assets\TwitchHourlyBot.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <!-- Explicit WPF XAML items keep the generated InitializeComponent/field code deterministic in Visual Studio. -->
+  <ItemGroup>
+    <ApplicationDefinition Include="App.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </ApplicationDefinition>
+    <Page Include="LoginWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="MainWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="EventSettingsWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Resource Include="Assets\TwitchHourlyBot.ico" />
+    <Resource Include="Assets\TwitchHourlyBot.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="App.xaml.cs"><DependentUpon>App.xaml</DependentUpon></Compile>
+    <Compile Update="LoginWindow.xaml.cs"><DependentUpon>LoginWindow.xaml</DependentUpon></Compile>
+    <Compile Update="MainWindow.xaml.cs"><DependentUpon>MainWindow.xaml</DependentUpon></Compile>
+    <Compile Update="EventSettingsWindow.xaml.cs"><DependentUpon>EventSettingsWindow.xaml</DependentUpon></Compile>
+  </ItemGroup>
+</Project>

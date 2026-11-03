@@ -1,0 +1,27 @@
+# Build outputs
+[Bb]in/
+[Oo]bj/
+[pP]ublish/
+
+# Visual Studio user and cache files
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Logs and temporary files
+*.log
+*.tmp
+
+# Local settings and credentials
+appsettings*.json
+.env
+.env.*
+!.env.example
+client-secret.dat
+token*.json
+
+# Backup files
+*.bak
+*.bak-*
