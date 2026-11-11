@@ -36,6 +36,10 @@ Open `TwitchHourlyBot.sln` in Visual Studio and build/run, or use `run.bat` from
 
 To create a Windows x64 self-contained release, use `publish-win-x64.bat`. The generated `publish/` folder is ignored by Git.
 
+## Try the web preview (Windows)
+
+Double-click `start-web.bat` (needs the .NET 8 SDK and Node.js LTS). It starts the API on port 5000 and the dashboard on port 4200 and opens http://localhost:4200. In VS Code you can instead run the task **Start web app (API + dashboard)** (Terminal > Run Task).
+
 ## Project layout
 
 - `src/TwitchHourlyBot.Core` - UI-independent logic (net8.0): auth, Twitch client, keyword service, event engine, models.
