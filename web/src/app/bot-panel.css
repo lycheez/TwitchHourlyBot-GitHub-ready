@@ -24,3 +24,4 @@ td.msg { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-spac
 .notice { margin: 0 0 12px; padding: 10px 14px; background: #1f2a1f; border: 1px solid #3fb950; border-radius: 6px; }
 .log { list-style: none; margin: 0; padding: 0; max-height: 220px; overflow: auto; font-family: ui-monospace, monospace; font-size: .85rem; }
 .log li { padding: 2px 0; border-bottom: 1px solid #242424; }
+button.twitch { background: #9146ff; border-color: #9146ff; color: #fff; }

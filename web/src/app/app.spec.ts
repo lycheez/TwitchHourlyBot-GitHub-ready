@@ -8,14 +8,14 @@ const channels = [
   { id: 2, name: 'beta', isEnabled: true, keywordProtectionEnabled: true, ruleCount: 0 },
 ];
 const settings = {
-  clientId: 'cid', hasClientSecret: true, intervalHours: 1, messageTemplate: 'hi {channel}',
+  intervalHours: 1, messageTemplate: 'hi {channel}',
   activityEnabled: true, activityIntervalMinutes: 30, redirectUri: 'http://localhost:4200/api/auth/callback',
 };
 const idle = { running: false, connected: false, login: null, nextEventAt: null, keywordRuleCount: 0, channels: [] };
 
 export function flushBotPanel(http: HttpTestingController) {
   http.expectOne('/api/settings').flush(settings);
-  http.expectOne('/api/auth/status').flush({ connected: false, login: null, userId: null, scopesOk: false });
+  http.expectOne('/api/auth/status').flush({ connected: false, login: null, userId: null, scopesOk: false, configured: true });
   http.expectOne('/api/bot').flush(idle);
   http.expectOne('/api/log').flush([]);
 }

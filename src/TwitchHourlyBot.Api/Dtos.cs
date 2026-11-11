@@ -11,6 +11,6 @@ public record UpdateRuleRequest(bool Enabled, int TimeoutSeconds);
 public record CheckMessageRequest(string? Message);
 public record CheckMessageResult(bool Matched, string? Keyword, int? TimeoutSeconds);
 
-public record SettingsDto(string ClientId, bool HasClientSecret, int IntervalHours, string MessageTemplate, bool ActivityEnabled, int ActivityIntervalMinutes, string RedirectUri);
-public record UpdateSettingsRequest(string? ClientId, string? ClientSecret, int? IntervalHours, string? MessageTemplate, bool? ActivityEnabled, int? ActivityIntervalMinutes);
+public record SettingsDto(int IntervalHours, string MessageTemplate, bool ActivityEnabled, int ActivityIntervalMinutes, string RedirectUri);
+public record UpdateSettingsRequest(int? IntervalHours, string? MessageTemplate, bool? ActivityEnabled, int? ActivityIntervalMinutes);
 public record LoginUrlResult(string Url);

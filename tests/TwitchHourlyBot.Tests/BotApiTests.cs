@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TwitchHourlyBot.Api;
 using TwitchHourlyBot.Api.Bot;
@@ -132,10 +133,25 @@ public sealed class BotFactory : WebApplicationFactory<Program>
     public TestTime Time { get; } = new();
     public FakeKeywordMonitorFactory Keywords { get; } = new();
 
-    public BotFactory() => _connection.Open();
+    private readonly bool _configured;
+
+    public BotFactory(bool configured = true)
+    {
+        _configured = configured;
+        _connection.Open();
+    }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        if (_configured)
+        {
+            builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Twitch:ClientId"] = "cid",
+                ["Twitch:ClientSecret"] = "s3cr3t-value",
+            }));
+        }
+
         builder.ConfigureServices(services =>
         {
             services.Remove(services.Single(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>)));
@@ -172,12 +188,8 @@ public class BotApiTests : IDisposable
 
     private BotRuntime Runtime => _factory.Services.GetRequiredService<BotRuntime>();
 
-    private async Task SaveCredentials() =>
-        (await _client.PutAsJsonAsync("/api/settings", new UpdateSettingsRequest("cid", "s3cr3t-value", null, null, null, null))).EnsureSuccessStatusCode();
-
     private async Task Login()
     {
-        await SaveCredentials();
         var result = (await _client.GetFromJsonAsync<LoginUrlResult>("/api/auth/login-url"))!;
         var state = HttpUtility.ParseQueryString(new Uri(result.Url).Query)["state"]!;
         var response = await _client.GetAsync($"/api/auth/callback?code=good-code&state={state}");
@@ -186,7 +198,7 @@ public class BotApiTests : IDisposable
     }
 
     private async Task DisableEvents() =>
-        (await _client.PutAsJsonAsync("/api/settings", new UpdateSettingsRequest(null, null, null, null, false, null))).EnsureSuccessStatusCode();
+        (await _client.PutAsJsonAsync("/api/settings", new UpdateSettingsRequest(null, null, false, null))).EnsureSuccessStatusCode();
 
     private async Task<ChannelDto> AddChannel(string name)
     {
@@ -200,25 +212,19 @@ public class BotApiTests : IDisposable
     // ---- settings and login ----
 
     [Fact]
-    public async Task Settings_never_return_the_client_secret()
+    public async Task Settings_expose_the_redirect_url_but_no_credentials()
     {
-        await SaveCredentials();
         var body = await (await _client.GetAsync("/api/settings")).Content.ReadAsStringAsync();
         Assert.DoesNotContain("s3cr3t-value", body);
+        Assert.DoesNotContain("clientSecret", body, StringComparison.OrdinalIgnoreCase);
         var settings = JsonSerializer.Deserialize<SettingsDto>(body, new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
-        Assert.Equal("cid", settings.ClientId);
-        Assert.True(settings.HasClientSecret);
         Assert.EndsWith("/api/auth/callback", settings.RedirectUri);
     }
 
     [Fact]
-    public async Task Empty_secret_keeps_the_stored_one()
+    public async Task Status_reports_that_the_server_is_configured()
     {
-        await SaveCredentials();
-        await _client.PutAsJsonAsync("/api/settings", new UpdateSettingsRequest("cid", "", 2, null, null, null));
-        var settings = (await _client.GetFromJsonAsync<SettingsDto>("/api/settings"))!;
-        Assert.True(settings.HasClientSecret);
-        Assert.Equal(2, settings.IntervalHours);
+        Assert.True((await _client.GetFromJsonAsync<AuthStatus>("/api/auth/status"))!.Configured);
     }
 
     [Theory]
@@ -227,21 +233,25 @@ public class BotApiTests : IDisposable
     [InlineData(null, 4)]
     public async Task Invalid_intervals_are_rejected(int? hours, int? minutes)
     {
-        var response = await _client.PutAsJsonAsync("/api/settings", new UpdateSettingsRequest(null, null, hours, null, null, minutes));
+        var response = await _client.PutAsJsonAsync("/api/settings", new UpdateSettingsRequest(hours, null, null, minutes));
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
-    public async Task Login_url_needs_credentials()
+    public async Task Login_is_refused_when_the_server_has_no_twitch_application()
     {
-        var response = await _client.GetAsync("/api/auth/login-url");
+        using var factory = new BotFactory(configured: false);
+        using var client = factory.CreateApiClient();
+
+        Assert.False((await client.GetFromJsonAsync<AuthStatus>("/api/auth/status"))!.Configured);
+        var response = await client.GetAsync("/api/auth/login-url");
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Twitch:ClientId", await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
     public async Task Login_url_contains_client_scopes_state_and_redirect()
     {
-        await SaveCredentials();
         var url = new Uri((await _client.GetFromJsonAsync<LoginUrlResult>("/api/auth/login-url"))!.Url);
         var query = HttpUtility.ParseQueryString(url.Query);
         Assert.Equal("id.twitch.tv", url.Host);
@@ -255,7 +265,6 @@ public class BotApiTests : IDisposable
     [Fact]
     public async Task Callback_with_unknown_state_is_rejected()
     {
-        await SaveCredentials();
         var response = await _client.GetAsync("/api/auth/callback?code=good-code&state=forged");
         Assert.Contains("login=error", response.Headers.Location!.OriginalString);
         Assert.False((await _client.GetFromJsonAsync<AuthStatus>("/api/auth/status"))!.Connected);
@@ -264,7 +273,6 @@ public class BotApiTests : IDisposable
     [Fact]
     public async Task State_can_only_be_used_once()
     {
-        await SaveCredentials();
         var url = (await _client.GetFromJsonAsync<LoginUrlResult>("/api/auth/login-url"))!.Url;
         var state = HttpUtility.ParseQueryString(new Uri(url).Query)["state"];
         await _client.GetAsync($"/api/auth/callback?code=good-code&state={state}");
@@ -275,7 +283,6 @@ public class BotApiTests : IDisposable
     [Fact]
     public async Task Twitch_error_on_callback_is_reported()
     {
-        await SaveCredentials();
         var url = (await _client.GetFromJsonAsync<LoginUrlResult>("/api/auth/login-url"))!.Url;
         var state = HttpUtility.ParseQueryString(new Uri(url).Query)["state"];
         var response = await _client.GetAsync($"/api/auth/callback?error=access_denied&state={state}");
@@ -302,7 +309,6 @@ public class BotApiTests : IDisposable
         var stored = db.AuthSessions.Single().ProtectedJson;
         Assert.DoesNotContain("at1", stored);
         Assert.DoesNotContain("rt1", stored);
-        Assert.DoesNotContain("s3cr3t-value", db.Settings.Single().ProtectedClientSecret);
     }
 
     [Fact]
@@ -365,7 +371,7 @@ public class BotApiTests : IDisposable
     public async Task Uses_the_configured_message_template_and_interval()
     {
         await Login();
-        await _client.PutAsJsonAsync("/api/settings", new UpdateSettingsRequest(null, null, 2, "{channel} is live for {hours}h ({live_time})", false, null)); // events off
+        await _client.PutAsJsonAsync("/api/settings", new UpdateSettingsRequest(2, "{channel} is live for {hours}h ({live_time})", false, null)); // events off
         await AddChannel("alpha");
         _factory.Twitch.Live["alpha"] = ("s", _factory.Time.Now - TimeSpan.FromMinutes(90));
         await _client.PostAsync("/api/bot/start", null);
@@ -454,7 +460,7 @@ public class BotApiTests : IDisposable
     public async Task Wellness_event_is_sent_when_the_event_interval_elapses()
     {
         await Login();
-        await _client.PutAsJsonAsync("/api/settings", new UpdateSettingsRequest(null, null, null, null, true, 5));
+        await _client.PutAsJsonAsync("/api/settings", new UpdateSettingsRequest(null, null, true, 5));
         await AddChannel("alpha");
         _factory.Twitch.Live["alpha"] = ("s", _factory.Time.Now - new TimeSpan(0, 10, 0));
         await _client.PostAsync("/api/bot/start", null);
@@ -470,7 +476,7 @@ public class BotApiTests : IDisposable
     public async Task Events_can_be_turned_off()
     {
         await Login();
-        await _client.PutAsJsonAsync("/api/settings", new UpdateSettingsRequest(null, null, null, null, false, 5));
+        await _client.PutAsJsonAsync("/api/settings", new UpdateSettingsRequest(null, null, false, 5));
         await AddChannel("alpha");
         _factory.Twitch.Live["alpha"] = ("s", _factory.Time.Now - new TimeSpan(0, 10, 0));
         await _client.PostAsync("/api/bot/start", null);

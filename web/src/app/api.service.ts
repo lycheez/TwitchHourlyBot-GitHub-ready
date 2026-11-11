@@ -116,8 +116,6 @@ export class ApiService {
 }
 
 export interface Settings {
-  clientId: string;
-  hasClientSecret: boolean;
   intervalHours: number;
   messageTemplate: string;
   activityEnabled: boolean;
@@ -126,8 +124,6 @@ export interface Settings {
 }
 
 export interface SettingsUpdate {
-  clientId?: string;
-  clientSecret?: string;
   intervalHours?: number;
   messageTemplate?: string;
   activityEnabled?: boolean;
@@ -139,6 +135,7 @@ export interface AuthStatus {
   login: string | null;
   userId: string | null;
   scopesOk: boolean;
+  configured: boolean;
 }
 
 export interface ChannelStatus {

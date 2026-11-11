@@ -38,16 +38,18 @@ test('duplicate channel shows an error', async ({ page }) => {
   await expect(page.getByRole('alert')).toContainText('already exists');
 });
 
-test('save Twitch credentials; the bot cannot start before login', async ({ page }) => {
+test('log in with Twitch is offered and the bot cannot start before login', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByText('Not connected.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Log in with Twitch' })).toBeVisible();
+  // Credentials come from server config and are never shown in the page.
+  await expect(page.locator('input[type=password]')).toHaveCount(0);
+  await expect(page.getByText('e2e-secret')).toHaveCount(0);
 
-  await page.getByLabel('Twitch client id').fill('e2e-client');
-  await page.getByLabel('Twitch client secret').fill('e2e-secret');
-  await page.getByRole('button', { name: 'Save credentials' }).click();
-  await expect(page.getByText('Credentials saved.')).toBeVisible();
-  await expect(page.getByLabel('Twitch client secret')).toHaveAttribute('placeholder', /saved/);
-  await expect(page.getByRole('button', { name: 'Log in with Twitch' })).toBeEnabled();
+  const login = await page.request.get('/api/auth/login-url');
+  const url = new URL((await login.json()).url);
+  expect(url.host).toBe('id.twitch.tv');
+  expect(url.searchParams.get('client_id')).toBe('e2e-client');
+  expect(url.searchParams.get('redirect_uri')).toBe('http://localhost:4200/api/auth/callback');
 
   await page.getByRole('button', { name: 'Start bot' }).click();
   await expect(page.getByRole('alert')).toContainText('Not connected to Twitch');

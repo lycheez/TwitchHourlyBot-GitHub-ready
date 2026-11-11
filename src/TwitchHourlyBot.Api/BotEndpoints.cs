@@ -15,7 +15,7 @@ public static class BotEndpoints
         api.MapGet("/settings", async (AppDbContext db, HttpRequest request) =>
             Results.Ok(ToDto(await db.Settings.AsNoTracking().FirstOrDefaultAsync() ?? new BotSettingsEntity(), request)));
 
-        api.MapPut("/settings", async (UpdateSettingsRequest req, AppDbContext db, SecretProtector protector, HttpRequest request) =>
+        api.MapPut("/settings", async (UpdateSettingsRequest req, AppDbContext db, HttpRequest request) =>
         {
             if (req.IntervalHours is < 1 or > 24) return Results.ValidationProblem(new Dictionary<string, string[]> { ["intervalHours"] = new[] { "Interval must be 1-24 hours." } });
             if (req.ActivityIntervalMinutes is < 5 or > 720) return Results.ValidationProblem(new Dictionary<string, string[]> { ["activityIntervalMinutes"] = new[] { "Event interval must be 5-720 minutes." } });
@@ -24,9 +24,6 @@ public static class BotEndpoints
 
             var settings = await db.Settings.FirstOrDefaultAsync();
             if (settings is null) db.Settings.Add(settings = new BotSettingsEntity());
-            if (req.ClientId is not null) settings.ClientId = req.ClientId.Trim();
-            // An empty secret keeps the stored one, so the UI never has to know it.
-            if (!string.IsNullOrWhiteSpace(req.ClientSecret)) settings.ProtectedClientSecret = protector.Protect(req.ClientSecret.Trim());
             if (req.IntervalHours is not null) settings.IntervalHours = req.IntervalHours.Value;
             if (req.MessageTemplate is not null) settings.MessageTemplate = req.MessageTemplate;
             if (req.ActivityEnabled is not null) settings.ActivityEnabled = req.ActivityEnabled.Value;
@@ -88,5 +85,5 @@ public static class BotEndpoints
     }
 
     private static SettingsDto ToDto(BotSettingsEntity s, HttpRequest request) =>
-        new(s.ClientId, !string.IsNullOrEmpty(s.ProtectedClientSecret), s.IntervalHours, s.MessageTemplate, s.ActivityEnabled, s.ActivityIntervalMinutes, RedirectUriFor(request));
+        new(s.IntervalHours, s.MessageTemplate, s.ActivityEnabled, s.ActivityIntervalMinutes, RedirectUriFor(request));
 }
