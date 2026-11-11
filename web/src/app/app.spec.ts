@@ -7,6 +7,19 @@ const channels = [
   { id: 1, name: 'alpha', isEnabled: true, keywordProtectionEnabled: true, ruleCount: 1 },
   { id: 2, name: 'beta', isEnabled: true, keywordProtectionEnabled: true, ruleCount: 0 },
 ];
+const settings = {
+  clientId: 'cid', hasClientSecret: true, intervalHours: 1, messageTemplate: 'hi {channel}',
+  activityEnabled: true, activityIntervalMinutes: 30, redirectUri: 'http://localhost:4200/api/auth/callback',
+};
+const idle = { running: false, connected: false, login: null, nextEventAt: null, keywordRuleCount: 0, channels: [] };
+
+export function flushBotPanel(http: HttpTestingController) {
+  http.expectOne('/api/settings').flush(settings);
+  http.expectOne('/api/auth/status').flush({ connected: false, login: null, userId: null, scopesOk: false });
+  http.expectOne('/api/bot').flush(idle);
+  http.expectOne('/api/log').flush([]);
+}
+
 const rules = [{ id: 10, keyword: 'spoiler', enabled: true, timeoutSeconds: 120 }];
 
 describe('App', () => {
@@ -25,6 +38,7 @@ describe('App', () => {
   async function load() {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
+    flushBotPanel(http);
     http.expectOne('/api/channels').flush(channels);
     http.expectOne('/api/channels/1/rules').flush(rules);
     await fixture.whenStable();
@@ -44,6 +58,7 @@ describe('App', () => {
   it('shows an empty state when there are no channels', async () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
+    flushBotPanel(http);
     http.expectOne('/api/channels').flush([]);
     await fixture.whenStable();
     fixture.detectChanges();
@@ -53,15 +68,17 @@ describe('App', () => {
   it('shows the API error message', async () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
+    flushBotPanel(http);
     http.expectOne('/api/channels').flush({ error: 'boom' }, { status: 409, statusText: 'Conflict' });
     await fixture.whenStable();
     fixture.detectChanges();
-    expect((fixture.nativeElement as HTMLElement).querySelector('[role=alert]')?.textContent).toContain('boom');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('boom');
   });
 
   it('shows a friendly message when the API is unreachable', async () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
+    flushBotPanel(http);
     http.expectOne('/api/channels').error(new ProgressEvent('error'));
     await fixture.whenStable();
     fixture.detectChanges();

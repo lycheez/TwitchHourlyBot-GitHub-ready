@@ -40,6 +40,16 @@ To create a Windows x64 self-contained release, use `publish-win-x64.bat`. The g
 
 Double-click `start-web.bat` (needs the .NET 8 SDK and Node.js LTS). It starts the API on port 5000 and the dashboard on port 4200 and opens http://localhost:4200. In VS Code you can instead run the task **Start web app (API + dashboard)** (Terminal > Run Task).
 
+### Using the bot from the web dashboard
+
+The API can run the bot itself (hourly "live for N hours" messages, wellness events, keyword timeouts), so the dashboard can do what the desktop app does:
+
+1. In your Twitch developer application, add the OAuth redirect URL shown in the dashboard (for local development with `start-web.bat`: `http://localhost:4200/api/auth/callback`).
+2. Enter the Client ID and Client Secret in the dashboard and save. The secret is encrypted on the server and is never sent back to the browser.
+3. Click **Log in with Twitch**, then **Start bot**.
+
+Status: early preview. It has automated tests against a fake Twitch but has not been run against real Twitch by the author yet, the API has no login of its own (use it on your own machine only), and event messages use the built-in defaults.
+
 ## Project layout
 
 - `src/TwitchHourlyBot.Core` - UI-independent logic (net8.0): auth, Twitch client, keyword service, event engine, models.
