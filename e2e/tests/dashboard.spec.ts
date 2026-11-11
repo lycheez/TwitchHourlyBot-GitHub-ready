@@ -12,8 +12,8 @@ test('add a channel and a rule, then check chat messages', async ({ page }) => {
   await page.getByPlaceholder('keyword', { exact: true }).fill('spoiler');
   await page.getByLabel('Timeout seconds').selectOption('120');
   await page.getByRole('button', { name: 'Add rule' }).click();
-  await expect(page.getByRole('cell', { name: 'spoiler' })).toBeVisible();
-  await expect(page.getByRole('cell', { name: '120s' })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'spoiler', exact: true })).toBeVisible();
+  await expect(page.getByRole('cell', { name: '120s', exact: true })).toBeVisible();
 
   await page.getByPlaceholder('type a chat message').fill('no SPOILER please');
   await page.getByRole('button', { name: 'Check' }).click();
