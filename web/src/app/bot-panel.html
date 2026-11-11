@@ -1,0 +1,111 @@
+@if (error()) {
+  <p class="error" role="alert">{{ error() }}</p>
+}
+@if (notice()) {
+  <p class="notice" role="status">{{ notice() }}</p>
+}
+
+<section class="card">
+  <h2>Twitch connection</h2>
+  @if (auth().connected) {
+    <p>
+      Connected as <strong>{{ auth().login }}</strong>
+      @if (!auth().scopesOk) { <span class="warn">(missing permissions, log in again)</span> }
+    </p>
+    <button type="button" class="danger" (click)="logout()">Disconnect</button>
+  } @else {
+    <p class="muted">Not connected.</p>
+  }
+
+  @if (settings(); as s) {
+    <form class="grid" (submit)="$event.preventDefault(); saveCredentials(clientIdInput, clientSecretInput)">
+      <label>Client ID
+        <input #clientIdInput [value]="s.clientId" aria-label="Twitch client id" placeholder="client id" />
+      </label>
+      <label>Client Secret
+        <input #clientSecretInput type="password" aria-label="Twitch client secret" autocomplete="off"
+               [placeholder]="s.hasClientSecret ? 'saved (leave empty to keep)' : 'client secret'" />
+      </label>
+      <button type="submit">Save credentials</button>
+    </form>
+    <p class="muted small">
+      Register this OAuth redirect URL in your Twitch application:
+      <code>{{ s.redirectUri }}</code>
+      <button type="button" class="link" (click)="copy(s.redirectUri)">copy</button>
+    </p>
+    @if (!auth().connected) {
+      <button type="button" (click)="login()" [disabled]="!s.clientId || !s.hasClientSecret">Log in with Twitch</button>
+    }
+  }
+</section>
+
+<section class="card">
+  <div class="head">
+    <h2>Bot</h2>
+    @if (bot(); as b) {
+      <span class="badge" [class.on]="b.running">{{ b.running ? 'RUNNING' : 'STOPPED' }}</span>
+    }
+  </div>
+  <div class="row">
+    <button type="button" (click)="start()" [disabled]="bot()?.running">Start bot</button>
+    <button type="button" class="danger" (click)="stop()" [disabled]="!bot()?.running">Stop bot</button>
+  </div>
+  @if (bot(); as b) {
+    @if (b.keywordRuleCount > 0) {
+      <p class="muted small">Keyword protection active: {{ b.keywordRuleCount }} rule(s).</p>
+    }
+    @if (b.channels.length > 0) {
+      <table>
+        <thead><tr><th>Channel</th><th>Status</th><th>Live time</th><th>Next message</th><th>Last message</th></tr></thead>
+        <tbody>
+          @for (c of b.channels; track c.channel) {
+            <tr>
+              <td>#{{ c.channel }}</td>
+              <td>{{ c.status }}</td>
+              <td>{{ c.liveTime }}</td>
+              <td>{{ c.nextMessage }}</td>
+              <td class="msg">{{ c.lastMessage || c.lastActivity }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  }
+</section>
+
+@if (settings(); as s) {
+  <section class="card">
+    <h2>Messages</h2>
+    <form class="grid" (submit)="$event.preventDefault(); saveBotSettings(hoursSelect, templateInput, eventsInput, eventMinutesInput)">
+      <label>Announce every
+        <select #hoursSelect aria-label="Announcement interval hours">
+          @for (h of [1, 2, 3, 4, 6, 12]; track h) {
+            <option [value]="h" [selected]="h === s.intervalHours">{{ h }} hour(s)</option>
+          }
+        </select>
+      </label>
+      <label class="wide">Message ({{ '{' }}channel{{ '}' }}, {{ '{' }}hours{{ '}' }}, {{ '{' }}minutes{{ '}' }}, {{ '{' }}live_time{{ '}' }})
+        <textarea #templateInput rows="2" aria-label="Announcement message" [value]="s.messageTemplate"></textarea>
+      </label>
+      <label class="inline">
+        <input #eventsInput type="checkbox" [checked]="s.activityEnabled" aria-label="Wellness events enabled" /> Wellness events
+      </label>
+      <label>Every (minutes)
+        <input #eventMinutesInput type="number" min="5" max="720" [value]="s.activityIntervalMinutes" aria-label="Event interval minutes" />
+      </label>
+      <button type="submit">Save settings</button>
+    </form>
+  </section>
+}
+
+<section class="card">
+  <h2>Activity log</h2>
+  @if (log().length === 0) {
+    <p class="muted">Nothing yet.</p>
+  }
+  <ul class="log">
+    @for (line of log(); track $index) {
+      <li>{{ line }}</li>
+    }
+  </ul>
+</section>

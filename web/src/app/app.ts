@@ -1,20 +1,10 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { HttpErrorResponse } from '@angular/common/http';
-import { ApiService, Channel, CheckResult, Rule } from './api.service';
-
-export function messageOf(err: unknown): string {
-  if (err instanceof HttpErrorResponse) {
-    if (err.status === 0) return 'Cannot reach the API. Is it running?';
-    const body = err.error;
-    if (body?.error) return String(body.error);
-    if (body?.errors) return Object.values<string[]>(body.errors).flat().join(' ');
-    return `Request failed (${err.status}).`;
-  }
-  return 'Unexpected error.';
-}
+import { ApiService, Channel, CheckResult, Rule, messageOf } from './api.service';
+import { BotPanel } from './bot-panel';
 
 @Component({
   selector: 'app-root',
+  imports: [BotPanel],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })

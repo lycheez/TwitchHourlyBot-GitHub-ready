@@ -37,3 +37,20 @@ test('duplicate channel shows an error', async ({ page }) => {
   await page.getByRole('button', { name: 'Add', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('already exists');
 });
+
+test('save Twitch credentials; the bot cannot start before login', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByText('Not connected.')).toBeVisible();
+
+  await page.getByLabel('Twitch client id').fill('e2e-client');
+  await page.getByLabel('Twitch client secret').fill('e2e-secret');
+  await page.getByRole('button', { name: 'Save credentials' }).click();
+  await expect(page.getByText('Credentials saved.')).toBeVisible();
+  await expect(page.getByLabel('Twitch client secret')).toHaveAttribute('placeholder', /saved/);
+  await expect(page.getByRole('button', { name: 'Log in with Twitch' })).toBeEnabled();
+
+  await page.getByRole('button', { name: 'Start bot' }).click();
+  await expect(page.getByRole('alert')).toContainText('Not connected to Twitch');
+  await expect(page.getByText('STOPPED')).toBeVisible();
+  await page.screenshot({ path: 'screenshots/bot-panel.png', fullPage: true });
+});

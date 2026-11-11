@@ -27,3 +27,5 @@ th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #2c2c2c; }
 .error { margin: 16px 24px 0; padding: 10px 14px; background: #3a1a1a; border: 1px solid #ff7b72; border-radius: 6px; }
 .result { padding: 8px 12px; border-radius: 6px; background: #1f2a1f; }
 .result.hit { background: #3a2f10; }
+
+.bot { padding: 16px 24px 0; }
