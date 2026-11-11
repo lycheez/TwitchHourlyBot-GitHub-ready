@@ -29,9 +29,11 @@ test('add a channel and a rule, then check chat messages', async ({ page }) => {
 test('duplicate channel shows an error', async ({ page }) => {
   const name = 'dup_' + Date.now().toString(36);
   await page.goto('/');
-  for (let i = 0; i < 2; i++) {
-    await page.getByPlaceholder('channel name').fill(name);
-    await page.getByRole('button', { name: 'Add', exact: true }).click();
-  }
+  await page.getByPlaceholder('channel name').fill(name);
+  await page.getByRole('button', { name: 'Add', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '#' + name })).toBeVisible();
+  await expect(page.getByPlaceholder('channel name')).toHaveValue('');
+  await page.getByPlaceholder('channel name').fill(name.toUpperCase());
+  await page.getByRole('button', { name: 'Add', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('already exists');
 });
