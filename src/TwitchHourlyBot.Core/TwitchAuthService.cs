@@ -25,11 +25,41 @@ public sealed class TwitchAuthService
     private readonly string _clientSecret;
     private readonly HttpClient _http;
 
-    public TwitchAuthService(string clientId, string clientSecret)
+    public const string Scopes = "user:read:chat user:write:chat moderator:manage:banned_users";
+
+    public TwitchAuthService(string clientId, string clientSecret, HttpClient? http = null)
     {
         _clientId = clientId;
         _clientSecret = clientSecret;
-        _http = new HttpClient();
+        _http = http ?? new HttpClient();
+    }
+
+    /// <summary>Builds the Twitch authorize URL for a redirect-based (web) login.</summary>
+    public string BuildAuthorizeUrl(string redirectUri, string state) =>
+        $"https://id.twitch.tv/oauth2/authorize?client_id={Uri.EscapeDataString(_clientId)}" +
+        $"&redirect_uri={Uri.EscapeDataString(redirectUri)}&response_type=code&scope={Uri.EscapeDataString(Scopes)}" +
+        $"&state={Uri.EscapeDataString(state)}";
+
+    /// <summary>Exchanges an authorization code for tokens and validates them.</summary>
+    public async Task<TwitchToken> ExchangeCodeAsync(string code, string redirectUri, CancellationToken cancellationToken = default)
+    {
+        var content = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["client_id"] = _clientId,
+            ["client_secret"] = _clientSecret,
+            ["code"] = code,
+            ["grant_type"] = "authorization_code",
+            ["redirect_uri"] = redirectUri
+        });
+
+        using var res = await _http.PostAsync(TokenUrl, content, cancellationToken);
+        var body = await res.Content.ReadAsStringAsync(cancellationToken);
+        if (!res.IsSuccessStatusCode)
+            throw new InvalidOperationException($"Twitch token API: {(int)res.StatusCode} {body}");
+
+        var token = DeserializeToken(body);
+        await ValidateAsync(token, cancellationToken);
+        return token;
     }
 
     public async Task<TwitchToken> LoginAsync(CancellationToken cancellationToken = default)
@@ -39,11 +69,7 @@ public sealed class TwitchAuthService
         listener.Start();
 
         var state = Convert.ToHexString(RandomNumberGenerator.GetBytes(24));
-        var scopes = Uri.EscapeDataString("user:read:chat user:write:chat moderator:manage:banned_users");
-        var url =
-            $"https://id.twitch.tv/oauth2/authorize?client_id={Uri.EscapeDataString(_clientId)}" +
-            $"&redirect_uri={Uri.EscapeDataString(RedirectUri)}&response_type=code&scope={scopes}" +
-            $"&state={Uri.EscapeDataString(state)}";
+        var url = BuildAuthorizeUrl(RedirectUri, state);
 
         Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
 
@@ -82,23 +108,7 @@ public sealed class TwitchAuthService
         if (string.IsNullOrWhiteSpace(code))
             throw new InvalidOperationException("No OAuth authorization code received.");
 
-        var content = new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            ["client_id"] = _clientId,
-            ["client_secret"] = _clientSecret,
-            ["code"] = code,
-            ["grant_type"] = "authorization_code",
-            ["redirect_uri"] = RedirectUri
-        });
-
-        using var res = await _http.PostAsync(TokenUrl, content, cancellationToken);
-        var body = await res.Content.ReadAsStringAsync(cancellationToken);
-        if (!res.IsSuccessStatusCode)
-            throw new InvalidOperationException($"Twitch token API: {(int)res.StatusCode} {body}");
-
-        var token = DeserializeToken(body);
-        await ValidateAsync(token, cancellationToken);
-        return token;
+        return await ExchangeCodeAsync(code, RedirectUri, cancellationToken);
     }
 
     public async Task<bool> ValidateAsync(TwitchToken token, CancellationToken cancellationToken = default)

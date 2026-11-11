@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
+using TwitchHourlyBot.Api.Bot;
 
 namespace TwitchHourlyBot.Api;
 
@@ -43,22 +44,24 @@ public static partial class Endpoints
             return Results.Created($"/api/channels/{channel.Id}", ToDto(channel));
         });
 
-        api.MapPut("/channels/{id:int}", async (int id, UpdateChannelRequest req, AppDbContext db) =>
+        api.MapPut("/channels/{id:int}", async (int id, UpdateChannelRequest req, AppDbContext db, BotRuntime bot) =>
         {
             var channel = await db.Channels.Include(c => c.Rules).FirstOrDefaultAsync(c => c.Id == id);
             if (channel is null) return Results.NotFound();
             channel.IsEnabled = req.IsEnabled;
             channel.KeywordProtectionEnabled = req.KeywordProtectionEnabled;
             await db.SaveChangesAsync();
+            if (bot.Running) await bot.RestartKeywordsAsync();
             return Results.Ok(ToDto(channel));
         });
 
-        api.MapDelete("/channels/{id:int}", async (int id, AppDbContext db) =>
+        api.MapDelete("/channels/{id:int}", async (int id, AppDbContext db, BotRuntime bot) =>
         {
             var channel = await db.Channels.FindAsync(id);
             if (channel is null) return Results.NotFound();
             db.Channels.Remove(channel);
             await db.SaveChangesAsync();
+            if (bot.Running) await bot.RestartKeywordsAsync();
             return Results.NoContent();
         });
 
@@ -69,7 +72,7 @@ public static partial class Endpoints
             return Results.Ok(rules.Select(ToDto));
         });
 
-        api.MapPost("/channels/{id:int}/rules", async (int id, CreateRuleRequest req, AppDbContext db) =>
+        api.MapPost("/channels/{id:int}/rules", async (int id, CreateRuleRequest req, AppDbContext db, BotRuntime bot) =>
         {
             if (!await db.Channels.AnyAsync(c => c.Id == id)) return Results.NotFound();
             var keyword = (req.Keyword ?? "").Trim();
@@ -88,25 +91,28 @@ public static partial class Endpoints
             };
             db.Rules.Add(rule);
             await db.SaveChangesAsync();
+            if (bot.Running) await bot.RestartKeywordsAsync();
             return Results.Created($"/api/channels/{id}/rules/{rule.Id}", ToDto(rule));
         });
 
-        api.MapPut("/channels/{id:int}/rules/{ruleId:int}", async (int id, int ruleId, UpdateRuleRequest req, AppDbContext db) =>
+        api.MapPut("/channels/{id:int}/rules/{ruleId:int}", async (int id, int ruleId, UpdateRuleRequest req, AppDbContext db, BotRuntime bot) =>
         {
             var rule = await db.Rules.FirstOrDefaultAsync(r => r.Id == ruleId && r.ChannelId == id);
             if (rule is null) return Results.NotFound();
             rule.Enabled = req.Enabled;
             rule.TimeoutSeconds = KeywordMatcher.ClampTimeout(req.TimeoutSeconds);
             await db.SaveChangesAsync();
+            if (bot.Running) await bot.RestartKeywordsAsync();
             return Results.Ok(ToDto(rule));
         });
 
-        api.MapDelete("/channels/{id:int}/rules/{ruleId:int}", async (int id, int ruleId, AppDbContext db) =>
+        api.MapDelete("/channels/{id:int}/rules/{ruleId:int}", async (int id, int ruleId, AppDbContext db, BotRuntime bot) =>
         {
             var rule = await db.Rules.FirstOrDefaultAsync(r => r.Id == ruleId && r.ChannelId == id);
             if (rule is null) return Results.NotFound();
             db.Rules.Remove(rule);
             await db.SaveChangesAsync();
+            if (bot.Running) await bot.RestartKeywordsAsync();
             return Results.NoContent();
         });
 
