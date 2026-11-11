@@ -185,6 +185,9 @@ public class BotApiTests : IDisposable
         Assert.Equal("/?login=ok", response.Headers.Location!.OriginalString);
     }
 
+    private async Task DisableEvents() =>
+        (await _client.PutAsJsonAsync("/api/settings", new UpdateSettingsRequest(null, null, null, null, false, null))).EnsureSuccessStatusCode();
+
     private async Task<ChannelDto> AddChannel(string name)
     {
         var response = await _client.PostAsJsonAsync("/api/channels", new CreateChannelRequest(name));
@@ -325,9 +328,9 @@ public class BotApiTests : IDisposable
     public async Task Sends_hourly_message_once_when_the_hour_mark_passes()
     {
         await Login();
+        await DisableEvents();
         await AddChannel("alpha");
-        _factory.Twitch.Live["alpha"] = ("stream-1", _factory.Time.Now - new TimeSpan(1, 0, 0));
-        // Seed: the stream was first seen at 0h (announced hour 0), then crosses the 1h mark.
+        // The bot first sees the stream at 30 minutes, then it crosses the 1h mark.
         _factory.Twitch.Live["alpha"] = ("stream-1", _factory.Time.Now - TimeSpan.FromMinutes(30));
         await _client.PostAsync("/api/bot/start", null);
         Assert.Empty(_factory.Twitch.Chats);
@@ -362,7 +365,7 @@ public class BotApiTests : IDisposable
     public async Task Uses_the_configured_message_template_and_interval()
     {
         await Login();
-        await _client.PutAsJsonAsync("/api/settings", new UpdateSettingsRequest(null, null, 2, "{channel} is live for {hours}h ({live_time})", false, null));
+        await _client.PutAsJsonAsync("/api/settings", new UpdateSettingsRequest(null, null, 2, "{channel} is live for {hours}h ({live_time})", false, null)); // events off
         await AddChannel("alpha");
         _factory.Twitch.Live["alpha"] = ("s", _factory.Time.Now - TimeSpan.FromMinutes(90));
         await _client.PostAsync("/api/bot/start", null);
@@ -375,6 +378,7 @@ public class BotApiTests : IDisposable
     public async Task A_new_stream_resets_the_announcement_state()
     {
         await Login();
+        await DisableEvents();
         await AddChannel("alpha");
         _factory.Twitch.Live["alpha"] = ("s1", _factory.Time.Now - TimeSpan.FromMinutes(59));
         await _client.PostAsync("/api/bot/start", null);
@@ -382,7 +386,10 @@ public class BotApiTests : IDisposable
         await Runtime.TickAsync();
         Assert.Single(_factory.Twitch.Chats);
 
+        // A new stream is first seen at 59 minutes, then crosses its own 1h mark.
         _factory.Twitch.Live["alpha"] = ("s2", _factory.Time.Now - TimeSpan.FromMinutes(59));
+        await Runtime.TickAsync();
+        Assert.Single(_factory.Twitch.Chats);
         _factory.Time.Now += TimeSpan.FromMinutes(2);
         await Runtime.TickAsync();
         Assert.Equal(2, _factory.Twitch.Chats.Count);
