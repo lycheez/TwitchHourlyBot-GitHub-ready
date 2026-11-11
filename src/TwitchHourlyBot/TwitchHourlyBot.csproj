@@ -35,6 +35,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\TwitchHourlyBot.Core\TwitchHourlyBot.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Update="App.xaml.cs"><DependentUpon>App.xaml</DependentUpon></Compile>
     <Compile Update="LoginWindow.xaml.cs"><DependentUpon>LoginWindow.xaml</DependentUpon></Compile>
     <Compile Update="MainWindow.xaml.cs"><DependentUpon>MainWindow.xaml</DependentUpon></Compile>

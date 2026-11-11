@@ -36,6 +36,12 @@ Open `TwitchHourlyBot.sln` in Visual Studio and build/run, or use `run.bat` from
 
 To create a Windows x64 self-contained release, use `publish-win-x64.bat`. The generated `publish/` folder is ignored by Git.
 
+## Project layout
+
+- `src/TwitchHourlyBot.Core` - UI-independent logic (net8.0): auth, Twitch client, keyword service, event engine, models.
+- `src/TwitchHourlyBot` - the WPF desktop app.
+- `tests/TwitchHourlyBot.Tests` - xUnit tests for the core library.
+
 ## How it works
 
 | Component | Responsibility |
@@ -62,7 +68,7 @@ To create a Windows x64 self-contained release, use `publish-win-x64.bat`. The g
 
 ## Version
 
-The included `VERSION.txt` identifies this source snapshot as `1.2.0`.
+The included `VERSION.txt` identifies this source snapshot as `1.3.0`.
 
 ## License
 
