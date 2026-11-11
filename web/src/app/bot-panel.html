@@ -16,6 +16,14 @@
   } @else if (auth().configured) {
     <p class="muted">Log in with the Twitch account the bot should chat and moderate as.</p>
     <button type="button" class="twitch" (click)="login()">Log in with Twitch</button>
+    @if (settings(); as s) {
+      <p class="muted small">
+        If Twitch answers <code>redirect_mismatch</code>, add this URL under "OAuth Redirect URLs" in your Twitch application
+        (you can keep the existing ones):
+        <code>{{ s.redirectUri }}</code>
+        <button type="button" class="link" (click)="copy(s.redirectUri)">copy</button>
+      </p>
+    }
   } @else {
     <p class="warn" role="note">
       The server has no Twitch application configured yet. Set <code>Twitch__ClientId</code> and
