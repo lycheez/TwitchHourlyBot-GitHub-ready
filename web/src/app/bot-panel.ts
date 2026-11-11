@@ -11,7 +11,7 @@ export class BotPanel implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly settings = signal<Settings | null>(null);
-  protected readonly auth = signal<AuthStatus>({ connected: false, login: null, userId: null, scopesOk: false });
+  protected readonly auth = signal<AuthStatus>({ connected: false, login: null, userId: null, scopesOk: false, configured: true });
   protected readonly bot = signal<BotStatus | null>(null);
   protected readonly log = signal<string[]>([]);
   protected readonly error = signal('');
@@ -39,19 +39,6 @@ export class BotPanel implements OnInit {
     this.api.authStatus().subscribe({ next: (a) => this.auth.set(a), error: () => undefined });
     this.api.bot().subscribe({ next: (b) => this.bot.set(b), error: (e) => this.error.set(messageOf(e)) });
     this.api.log().subscribe({ next: (l) => this.log.set(l), error: () => undefined });
-  }
-
-  protected saveCredentials(clientId: HTMLInputElement, clientSecret: HTMLInputElement): void {
-    this.error.set('');
-    this.notice.set('');
-    this.api.saveSettings({ clientId: clientId.value, clientSecret: clientSecret.value }).subscribe({
-      next: (s) => {
-        this.settings.set(s);
-        clientSecret.value = '';
-        this.notice.set('Credentials saved.');
-      },
-      error: (e) => this.error.set(messageOf(e)),
-    });
   }
 
   protected login(): void {

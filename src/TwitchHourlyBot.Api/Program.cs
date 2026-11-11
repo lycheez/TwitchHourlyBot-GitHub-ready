@@ -5,6 +5,10 @@ using TwitchHourlyBot.Api.Bot;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Machine-local config (gitignored): holds the Twitch application credentials.
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false);
+builder.Services.Configure<TwitchOptions>(builder.Configuration.GetSection("Twitch"));
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("Default") ?? "Data Source=twitchbot.db"));
 builder.Services.AddEndpointsApiExplorer();

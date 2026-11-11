@@ -6,35 +6,27 @@
 }
 
 <section class="card">
-  <h2>Twitch connection</h2>
+  <h2>Twitch account</h2>
   @if (auth().connected) {
     <p>
       Connected as <strong>{{ auth().login }}</strong>
       @if (!auth().scopesOk) { <span class="warn">(missing permissions, log in again)</span> }
     </p>
     <button type="button" class="danger" (click)="logout()">Disconnect</button>
+  } @else if (auth().configured) {
+    <p class="muted">Log in with the Twitch account the bot should chat and moderate as.</p>
+    <button type="button" class="twitch" (click)="login()">Log in with Twitch</button>
   } @else {
-    <p class="muted">Not connected.</p>
-  }
-
-  @if (settings(); as s) {
-    <form class="grid" (submit)="$event.preventDefault(); saveCredentials(clientIdInput, clientSecretInput)">
-      <label>Client ID
-        <input #clientIdInput [value]="s.clientId" aria-label="Twitch client id" placeholder="client id" />
-      </label>
-      <label>Client Secret
-        <input #clientSecretInput type="password" aria-label="Twitch client secret" autocomplete="off"
-               [placeholder]="s.hasClientSecret ? 'saved (leave empty to keep)' : 'client secret'" />
-      </label>
-      <button type="submit">Save credentials</button>
-    </form>
-    <p class="muted small">
-      Register this OAuth redirect URL in your Twitch application:
-      <code>{{ s.redirectUri }}</code>
-      <button type="button" class="link" (click)="copy(s.redirectUri)">copy</button>
+    <p class="warn" role="note">
+      The server has no Twitch application configured yet. Set <code>Twitch__ClientId</code> and
+      <code>Twitch__ClientSecret</code> (or run <code>start-web.bat</code>, which asks for them once), then reload.
     </p>
-    @if (!auth().connected) {
-      <button type="button" (click)="login()" [disabled]="!s.clientId || !s.hasClientSecret">Log in with Twitch</button>
+    @if (settings(); as s) {
+      <p class="muted small">
+        Redirect URL to register in the Twitch developer console:
+        <code>{{ s.redirectUri }}</code>
+        <button type="button" class="link" (click)="copy(s.redirectUri)">copy</button>
+      </p>
     }
   }
 </section>

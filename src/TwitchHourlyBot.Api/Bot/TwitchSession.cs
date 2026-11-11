@@ -1,10 +1,11 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace TwitchHourlyBot.Api.Bot;
 
-public sealed record AuthStatus(bool Connected, string? Login, string? UserId, bool ScopesOk);
+public sealed record AuthStatus(bool Connected, string? Login, string? UserId, bool ScopesOk, bool Configured);
 
 /// <summary>
 /// Holds the Twitch login for the whole server: redirect-based OAuth, token validation/refresh,
@@ -19,36 +20,35 @@ public sealed class TwitchSession
     private readonly SecretProtector _protector;
     private readonly ActivityLog _log;
     private readonly TimeProvider _time;
+    private readonly TwitchOptions _options;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly Dictionary<string, (string RedirectUri, DateTimeOffset Created)> _pendingLogins = new();
     private TwitchToken? _token;
     private TwitchClient? _client;
     private bool _loaded;
 
-    public TwitchSession(IServiceScopeFactory scopes, IHttpClientFactory httpFactory, SecretProtector protector, ActivityLog log, TimeProvider time)
+    public TwitchSession(IServiceScopeFactory scopes, IHttpClientFactory httpFactory, SecretProtector protector, ActivityLog log, TimeProvider time, IOptions<TwitchOptions> options)
     {
         _scopes = scopes;
         _httpFactory = httpFactory;
         _protector = protector;
         _log = log;
         _time = time;
+        _options = options.Value;
     }
 
     public TwitchToken? Token => _token;
     public TwitchClient? Client => _client;
-    public string ClientId { get; private set; } = "";
+    public string ClientId => _options.ClientId.Trim();
+
+    public bool Configured => _options.Configured;
 
     public AuthStatus Status => _token is null
-        ? new AuthStatus(false, null, null, false)
-        : new AuthStatus(true, _token.Login, _token.UserId, RequiredScopes.All(_token.HasScope));
+        ? new AuthStatus(false, null, null, false, Configured)
+        : new AuthStatus(true, _token.Login, _token.UserId, RequiredScopes.All(_token.HasScope), Configured);
 
-    private async Task<(string ClientId, string Secret)> LoadCredentialsAsync(CancellationToken ct)
-    {
-        using var scope = _scopes.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var settings = await db.Settings.AsNoTracking().FirstOrDefaultAsync(ct);
-        return (settings?.ClientId ?? "", _protector.Unprotect(settings?.ProtectedClientSecret ?? ""));
-    }
+    private Task<(string ClientId, string Secret)> LoadCredentialsAsync(CancellationToken ct) =>
+        Task.FromResult((_options.ClientId.Trim(), _options.ClientSecret.Trim()));
 
     private TwitchAuthService CreateAuth(string clientId, string secret) =>
         new(clientId, secret, _httpFactory.CreateClient("twitch"));
@@ -58,7 +58,7 @@ public sealed class TwitchSession
     {
         var (clientId, secret) = await LoadCredentialsAsync(ct);
         if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(secret))
-            throw new InvalidOperationException("Save the Twitch Client ID and Client Secret first.");
+            throw new InvalidOperationException("The server is not configured with a Twitch application yet. Set Twitch:ClientId and Twitch:ClientSecret.");
 
         var state = Convert.ToHexString(RandomNumberGenerator.GetBytes(24));
         await _gate.WaitAsync(ct);
@@ -158,7 +158,6 @@ public sealed class TwitchSession
     {
         _token = token;
         _loaded = true;
-        ClientId = clientId;
         if (_client is null) _client = new TwitchClient(clientId, token.AccessToken, RecoverAsync, _httpFactory.CreateClient("twitch"));
         else _client.SetAccessToken(token.AccessToken);
 

@@ -45,8 +45,8 @@ Double-click `start-web.bat` (needs the .NET 8 SDK and Node.js LTS). It starts t
 The API can run the bot itself (hourly "live for N hours" messages, wellness events, keyword timeouts), so the dashboard can do what the desktop app does:
 
 1. In your Twitch developer application, add the OAuth redirect URL shown in the dashboard (for local development with `start-web.bat`: `http://localhost:4200/api/auth/callback`).
-2. Enter the Client ID and Client Secret in the dashboard and save. The secret is encrypted on the server and is never sent back to the browser.
-3. Click **Log in with Twitch**, then **Start bot**.
+2. Give the server your Twitch application's Client ID and Secret once: `start-web.bat` asks on first run and saves them to the git-ignored `src/TwitchHourlyBot.Api/appsettings.Local.json`. Alternatively set the environment variables `Twitch__ClientId` and `Twitch__ClientSecret`. They are never entered in or shown by the dashboard.
+3. Open the dashboard, click **Log in with Twitch**, then **Start bot**.
 
 Status: early preview. It has automated tests against a fake Twitch but has not been run against real Twitch by the author yet, the API has no login of its own (use it on your own machine only), and event messages use the built-in defaults.
 

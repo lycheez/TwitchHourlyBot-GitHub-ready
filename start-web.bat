@@ -23,6 +23,17 @@ if errorlevel 1 (
   exit /b 1
 )
 
+if not exist "src\TwitchHourlyBot.Api\appsettings.Local.json" (
+  echo.
+  echo First run: the Twitch application credentials are needed once.
+  powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0setup-twitch.ps1"
+  if errorlevel 1 (
+    echo Setup was not completed.
+    pause
+    exit /b 1
+  )
+)
+
 if not exist web\node_modules (
   echo Installing web dependencies...
   pushd web

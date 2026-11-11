@@ -11,6 +11,7 @@ export default defineConfig({
       url: 'http://localhost:5000/api/health',
       timeout: 180_000,
       reuseExistingServer: !process.env.CI,
+      env: { Twitch__ClientId: 'e2e-client', Twitch__ClientSecret: 'e2e-secret' },
     },
     {
       command: 'npm start --prefix ../web',
