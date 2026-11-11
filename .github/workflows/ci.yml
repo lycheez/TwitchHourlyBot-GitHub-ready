@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    # The app is a WPF desktop application, so it needs the Windows SDK.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore TwitchHourlyBot.sln
+
+      - name: Build
+        run: dotnet build TwitchHourlyBot.sln --configuration Release --no-restore

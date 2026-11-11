@@ -1,5 +1,8 @@
 # Twitch Hourly Bot
 
+[![CI](https://github.com/lycheez/TwitchHourlyBot-GitHub-ready/actions/workflows/ci.yml/badge.svg)](https://github.com/lycheez/TwitchHourlyBot-GitHub-ready/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 A Windows desktop Twitch automation app built with C# and WPF on .NET 8.
 
 ## Features
@@ -18,14 +21,47 @@ A Windows desktop Twitch automation app built with C# and WPF on .NET 8.
 
 The app requests these Twitch scopes: `user:read:chat`, `user:write:chat`, and `moderator:manage:banned_users`. The bot account must be a moderator in channels where it performs keyword timeouts.
 
+## Set up a Twitch application
+
+1. Register an application in the [Twitch Developer Console](https://dev.twitch.tv/console).
+2. Add `http://localhost:37821/callback/` as an OAuth Redirect URL (the trailing slash matters).
+3. Copy the application's Client ID and generate a Client Secret.
+4. Enter both in the app on first launch and complete the Twitch authorization in your browser.
+
 ## Run
 
 Open `TwitchHourlyBot.sln` in Visual Studio and build/run, or use `run.bat` from this folder after installing the .NET 8 SDK.
 
-On first launch, enter your Twitch Client ID and Client Secret in the app and complete Twitch authorization. Credentials and OAuth session data are protected with Windows DPAPI for the current Windows user. Do not commit credentials, tokens, or local app data to this repository.
-
 To create a Windows x64 self-contained release, use `publish-win-x64.bat`. The generated `publish/` folder is ignored by Git.
+
+## How it works
+
+| Component | Responsibility |
+| --- | --- |
+| `TwitchAuthService` | OAuth authorization-code flow using a local `HttpListener` callback, `state` check, token validation, refresh (handles rotated refresh tokens) and revoke. |
+| `TwitchClient` | Thin wrapper over the Twitch Helix API (users, streams, chat messages, timeouts). Retries a request once after re-authenticating when Twitch answers `401`. |
+| `KeywordTimeoutService` | Connects to Twitch EventSub over WebSocket, subscribes to `channel.chat.message` for each enabled channel and times out chatters whose message contains an enabled keyword. Broadcasters, moderators and the bot itself are skipped; timeouts are clamped to 1-600 seconds and de-duplicated per user and keyword. Reconnects with exponential backoff (3 s up to 30 s). |
+| `EventEngine` | Picks a wellness message for a channel, respecting per-category cooldowns and avoiding an immediate repeat of the last message in a category. |
+| `SecureStorage` | Windows DPAPI wrapper (P/Invoke) used to protect the client secret and the saved OAuth session. |
+| Stores | Settings, stream state and cooldown state are JSON files under `%LocalAppData%\TwitchHourlyBot`. |
+
+## Security notes
+
+- Credentials and OAuth session data are protected with Windows DPAPI for the current Windows user. Do not commit credentials, tokens, or local app data to this repository.
+- The OAuth `state` parameter is generated per login and verified on the callback.
+- `.gitignore` excludes build output, `appsettings*.json` and `.env*` files.
+
+## Known limitations
+
+- Windows only (WPF and DPAPI).
+- There is no automated test suite yet; CI currently verifies that the solution builds.
+- Much of the application logic lives in `MainWindow.xaml.cs` and in static stores, which makes it hard to unit test. Separating these is planned.
+- User-facing strings are currently Thai only.
 
 ## Version
 
 The included `VERSION.txt` identifies this source snapshot as `1.2.0`.
+
+## License
+
+[MIT](LICENSE)
