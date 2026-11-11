@@ -1,0 +1,92 @@
+<header class="top">
+  <h1>Twitch Hourly Bot</h1>
+  <span class="sub">Keyword timeout control</span>
+</header>
+
+@if (error()) {
+  <p class="error" role="alert">{{ error() }}</p>
+}
+
+<main class="layout">
+  <aside class="panel">
+    <h2>Channels</h2>
+    <form class="row" (submit)="$event.preventDefault(); addChannel(nameInput)">
+      <input #nameInput placeholder="channel name" aria-label="Channel name" maxlength="26" />
+      <button type="submit">Add</button>
+    </form>
+
+    @if (channels().length === 0) {
+      <p class="muted">No channels yet.</p>
+    }
+    <ul class="channels">
+      @for (c of channels(); track c.id) {
+        <li [class.active]="c.id === selected()?.id">
+          <button type="button" class="link" (click)="select(c)">
+            <span class="dot" [class.off]="!c.isEnabled"></span>#{{ c.name }}
+            <span class="muted">{{ c.ruleCount }} rules</span>
+          </button>
+        </li>
+      }
+    </ul>
+  </aside>
+
+  <section class="panel">
+    @if (selected(); as channel) {
+      <div class="head">
+        <h2>#{{ channel.name }}</h2>
+        <button type="button" class="danger" (click)="deleteChannel(channel)">Delete channel</button>
+      </div>
+
+      <div class="toggles">
+        <label><input type="checkbox" [checked]="channel.isEnabled" (change)="toggleChannel(channel, 'isEnabled')" /> Channel enabled</label>
+        <label><input type="checkbox" [checked]="channel.keywordProtectionEnabled" (change)="toggleChannel(channel, 'keywordProtectionEnabled')" /> Keyword protection</label>
+      </div>
+
+      <h3>Keyword rules</h3>
+      <form class="row" (submit)="$event.preventDefault(); addRule(keywordInput, timeoutSelect)">
+        <input #keywordInput placeholder="keyword" aria-label="Keyword" maxlength="100" />
+        <select #timeoutSelect aria-label="Timeout seconds">
+          @for (t of timeoutOptions; track t) {
+            <option [value]="t" [selected]="t === 60">{{ t }}s</option>
+          }
+        </select>
+        <button type="submit">Add rule</button>
+      </form>
+
+      @if (rules().length === 0) {
+        <p class="muted">No keywords. Add the words you want to time out.</p>
+      } @else {
+        <table>
+          <thead><tr><th>Keyword</th><th>Timeout</th><th>On</th><th></th></tr></thead>
+          <tbody>
+            @for (r of rules(); track r.id) {
+              <tr>
+                <td>{{ r.keyword }}</td>
+                <td>{{ r.timeoutSeconds }}s</td>
+                <td><input type="checkbox" [checked]="r.enabled" (change)="toggleRule(r)" [attr.aria-label]="'Enable ' + r.keyword" /></td>
+                <td><button type="button" class="danger small" (click)="deleteRule(r)">Remove</button></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+
+      <h3>Try a chat message</h3>
+      <form class="row" (submit)="$event.preventDefault(); check(messageInput)">
+        <input #messageInput placeholder="type a chat message" aria-label="Chat message" />
+        <button type="submit">Check</button>
+      </form>
+      @if (checkResult(); as result) {
+        <p class="result" [class.hit]="result.matched">
+          @if (result.matched) {
+            Would time out for {{ result.timeoutSeconds }}s (keyword "{{ result.keyword }}").
+          } @else {
+            No rule matches.
+          }
+        </p>
+      }
+    } @else {
+      <p class="muted">Select or add a channel.</p>
+    }
+  </section>
+</main>

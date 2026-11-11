@@ -23,3 +23,19 @@ jobs:
         run: dotnet build TwitchHourlyBot.sln --configuration Release --no-restore
       - name: Test
         run: dotnet test TwitchHourlyBot.sln --configuration Release --no-build --verbosity normal
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm test -- --watch=false
