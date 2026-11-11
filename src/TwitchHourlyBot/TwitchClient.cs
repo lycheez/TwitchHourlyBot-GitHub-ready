@@ -15,12 +15,13 @@ public sealed class TwitchClient
 {
     private readonly string _clientId;
     private readonly Func<CancellationToken, Task<bool>>? _recoverAuthentication;
-    private readonly HttpClient _http = new();
+    private readonly HttpClient _http;
     private string _token;
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
-    public TwitchClient(string clientId, string token, Func<CancellationToken, Task<bool>>? recoverAuthentication = null)
+    public TwitchClient(string clientId, string token, Func<CancellationToken, Task<bool>>? recoverAuthentication = null, HttpClient? http = null)
     {
+        _http = http ?? new HttpClient();
         _clientId = clientId;
         _token = token;
         _recoverAuthentication = recoverAuthentication;

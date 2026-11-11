@@ -13,7 +13,6 @@ namespace TwitchHourlyBot;
 
 public sealed class KeywordTimeoutService : IAsyncDisposable
 {
-    public const string DefaultKeyword = "เนเน่";
     public const int DefaultTimeoutSeconds = 60;
     private const string EventSubUrl = "https://api.twitch.tv/helix/eventsub/subscriptions";
     private const string WebSocketUrl = "wss://eventsub.wss.twitch.tv/ws";
@@ -224,12 +223,10 @@ public sealed class KeywordTimeoutService : IAsyncDisposable
         if (string.Equals(userId, _botUserId, StringComparison.OrdinalIgnoreCase)) return;
         if (HasProtectedBadge(ev)) return;
 
-        var matchedRule = channel.Rules
-            .Where(r => r.Enabled && !string.IsNullOrWhiteSpace(r.Keyword))
-            .FirstOrDefault(r => message.IndexOf(r.Keyword.Trim(), StringComparison.OrdinalIgnoreCase) >= 0);
+        var matchedRule = KeywordMatcher.FindMatch(message, channel.Rules);
         if (matchedRule is null) return;
 
-        var timeoutSeconds = Math.Clamp(matchedRule.TimeoutSeconds, 1, 600);
+        var timeoutSeconds = KeywordMatcher.ClampTimeout(matchedRule.TimeoutSeconds);
         var cooldownKey = broadcasterId + ":" + userId + ":" + matchedRule.Keyword;
         lock (_recentTimeouts)
         {
