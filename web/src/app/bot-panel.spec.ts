@@ -40,6 +40,8 @@ describe('BotPanel', () => {
     const login = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find((b) => b.textContent?.includes('Log in with Twitch'))!;
     expect(login.disabled).toBe(false);
     expect(text(fixture)).not.toContain('Client Secret');
+    expect(text(fixture)).toContain('redirect_mismatch');
+    expect(text(fixture)).toContain('http://localhost:4200/api/auth/callback');
     expect((fixture.nativeElement as HTMLElement).querySelector('input[type=password]')).toBeNull();
   });
 
