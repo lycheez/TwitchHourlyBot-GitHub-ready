@@ -40,6 +40,8 @@ To create a Windows x64 self-contained release, use `publish-win-x64.bat`. The g
 
 - `src/TwitchHourlyBot.Core` - UI-independent logic (net8.0): auth, Twitch client, keyword service, event engine, models.
 - `src/TwitchHourlyBot` - the WPF desktop app.
+- `src/TwitchHourlyBot.Api` - ASP.NET Core Web API (SQLite) for channels and keyword rules; Swagger at `/swagger`.
+- `web` - Angular dashboard for that API (see `web/README.md`).
 - `tests/TwitchHourlyBot.Tests` - xUnit tests for the core library.
 
 ## How it works
@@ -61,7 +63,7 @@ To create a Windows x64 self-contained release, use `publish-win-x64.bat`. The g
 
 ## Known limitations
 
-- Windows only (WPF and DPAPI).
+- The desktop app is Windows only (WPF and DPAPI). The web API and dashboard are an early preview: no authentication and no Twitch connection yet, so run them locally only.
 - Test coverage is partial: unit tests cover keyword matching, event selection/cooldowns and the Twitch client's 401 retry. OAuth, EventSub and the UI are not covered yet.
 - Much of the application logic lives in `MainWindow.xaml.cs` and in static stores, which makes it hard to unit test. Separating these is planned.
 - User-facing strings are currently Thai only.
