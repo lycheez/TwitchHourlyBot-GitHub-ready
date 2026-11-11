@@ -558,7 +558,7 @@ public partial class MainWindow : Window
         if (NewKeywordTimeoutBox.SelectedItem is ComboBoxItem item && int.TryParse(item.Tag?.ToString(), out var selected))
             timeout = selected;
 
-        channel.KeywordRules.Add(new KeywordRule { Keyword = keyword, Enabled = true, TimeoutSeconds = Math.Clamp(timeout, 1, 600) });
+        channel.KeywordRules.Add(new KeywordRule { Keyword = keyword, Enabled = true, TimeoutSeconds = KeywordMatcher.ClampTimeout(timeout) });
         channel.KeywordProtectionEnabled = true;
         NewKeywordBox.Clear();
         SaveSettings();
@@ -609,16 +609,8 @@ public partial class MainWindow : Window
 
     private static void EnsureKeywordSettings(ChannelConfig channel)
     {
+        // No default keyword: rules are only the ones the streamer adds.
         channel.KeywordRules ??= new ObservableCollection<KeywordRule>();
-        if (channel.KeywordRules.Count == 0)
-        {
-            channel.KeywordRules.Add(new KeywordRule
-            {
-                Keyword = KeywordTimeoutService.DefaultKeyword,
-                Enabled = true,
-                TimeoutSeconds = KeywordTimeoutService.DefaultTimeoutSeconds
-            });
-        }
     }
 
     private async Task TickAsync()

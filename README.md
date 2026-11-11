@@ -9,7 +9,7 @@ A Windows desktop Twitch automation app built with C# and WPF on .NET 8.
 
 - Twitch OAuth sign-in with session validation, token refresh, and disconnect controls.
 - Monitor multiple Twitch channels and send a configured chat message after each channel has been live for a chosen number of hours.
-- EventSub chat monitoring with per-channel keyword rules and automatic timeout durations.
+- EventSub chat monitoring with per-channel keyword rules and automatic timeout durations. There are no built-in keywords: add your own per channel.
 - Per-channel wellness messages for hydration, eye breaks, stretching, relaxation, and encouragement, with category cooldowns.
 - Dashboard, channel controls, settings, and an activity log.
 
@@ -29,6 +29,8 @@ The app requests these Twitch scopes: `user:read:chat`, `user:write:chat`, and `
 4. Enter both in the app on first launch and complete the Twitch authorization in your browser.
 
 ## Run
+
+Run the tests with `dotnet test TwitchHourlyBot.sln`.
 
 Open `TwitchHourlyBot.sln` in Visual Studio and build/run, or use `run.bat` from this folder after installing the .NET 8 SDK.
 
@@ -54,7 +56,7 @@ To create a Windows x64 self-contained release, use `publish-win-x64.bat`. The g
 ## Known limitations
 
 - Windows only (WPF and DPAPI).
-- There is no automated test suite yet; CI currently verifies that the solution builds.
+- Test coverage is partial: unit tests cover keyword matching, event selection/cooldowns and the Twitch client's 401 retry. OAuth, EventSub and the UI are not covered yet.
 - Much of the application logic lives in `MainWindow.xaml.cs` and in static stores, which makes it hard to unit test. Separating these is planned.
 - User-facing strings are currently Thai only.
 

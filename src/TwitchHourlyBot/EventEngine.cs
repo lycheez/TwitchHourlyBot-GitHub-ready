@@ -100,9 +100,35 @@ public static class EventMessageDefaults
     };
 }
 
+public interface ICooldownStore
+{
+    bool IsReady(string channel, string category, int cooldownMinutes, DateTimeOffset now);
+    DateTimeOffset GetLastSent(string channel, string category);
+    string GetLastMessageId(string channel, string category);
+    void MarkSent(string channel, string category, string messageId, DateTimeOffset now);
+}
+
+/// <summary>Production store: delegates to the JSON-backed static <see cref="CooldownStore"/>.</summary>
+public sealed class PersistentCooldownStore : ICooldownStore
+{
+    public bool IsReady(string channel, string category, int cooldownMinutes, DateTimeOffset now) => CooldownStore.IsReady(channel, category, cooldownMinutes, now);
+    public DateTimeOffset GetLastSent(string channel, string category) => CooldownStore.GetLastSent(channel, category);
+    public string GetLastMessageId(string channel, string category) => CooldownStore.GetLastMessageId(channel, category);
+    public void MarkSent(string channel, string category, string messageId, DateTimeOffset now) => CooldownStore.MarkSent(channel, category, messageId, now);
+}
+
 public sealed class EventEngine
 {
-    private readonly Random _random = new();
+    private readonly Random _random;
+    private readonly ICooldownStore _cooldowns;
+
+    public EventEngine() : this(new PersistentCooldownStore(), new Random()) { }
+
+    public EventEngine(ICooldownStore cooldowns, Random random)
+    {
+        _cooldowns = cooldowns;
+        _random = random;
+    }
 
     public EventMessage? PickEvent(ChannelConfig channel, EventEngineSettings globalSettings, DateTimeOffset now)
     {
@@ -112,7 +138,7 @@ public sealed class EventEngine
         var available = globalSettings.Messages
             .Where(m => !string.IsNullOrWhiteSpace(m.Text))
             .Where(m => channel.EventSettings.GetCategory(m.Category).Enabled)
-            .Where(m => CooldownStore.IsReady(channel.Channel, m.Category, channel.EventSettings.GetCategory(m.Category).CooldownMinutes, now))
+            .Where(m => _cooldowns.IsReady(channel.Channel, m.Category, channel.EventSettings.GetCategory(m.Category).CooldownMinutes, now))
             .ToList();
 
         if (available.Count == 0) return null;
@@ -121,12 +147,12 @@ public sealed class EventEngine
         var grouped = available.GroupBy(x => x.Category).ToList();
         var eligibleCategories = grouped
             .Select(g => g.Key)
-            .OrderBy(category => CooldownStore.GetLastSent(channel.Channel, category))
+            .OrderBy(category => _cooldowns.GetLastSent(channel.Channel, category))
             .ToList();
 
         var category = eligibleCategories[_random.Next(Math.Min(2, eligibleCategories.Count))];
         var candidates = grouped.First(g => g.Key == category).ToList();
-        var lastMessageId = CooldownStore.GetLastMessageId(channel.Channel, category);
+        var lastMessageId = _cooldowns.GetLastMessageId(channel.Channel, category);
         var withoutLast = candidates.Where(x => x.Id != lastMessageId).ToList();
         if (withoutLast.Count > 0) candidates = withoutLast;
 
