@@ -1,0 +1,28 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "API",
+      "type": "shell",
+      "command": "dotnet run --project src/TwitchHourlyBot.Api --urls http://localhost:5000",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "group": "web" }
+    },
+    {
+      "label": "Web",
+      "type": "shell",
+      "command": "npm install && npm start",
+      "options": { "cwd": "${workspaceFolder}/web" },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "group": "web" }
+    },
+    {
+      "label": "Start web app (API + dashboard)",
+      "dependsOn": ["API", "Web"],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    }
+  ]
+}
