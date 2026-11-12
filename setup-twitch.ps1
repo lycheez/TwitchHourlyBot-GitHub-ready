@@ -17,9 +17,13 @@ try {
         $bytes = [Convert]::FromBase64String((Get-Content $secretPath -Raw).Trim())
         $plain = [Text.Encoding]::UTF8.GetString([Security.Cryptography.ProtectedData]::Unprotect($bytes, $null, 'CurrentUser')).Trim()
         if ($id -and $plain) {
-            Write-Host 'Found the Twitch credentials saved by the desktop app; reusing them.'
-            Save-Config $id $plain
-            exit 0
+            Write-Host "Found a Twitch application saved by the desktop app: Client ID $id"
+            Write-Host 'The web login only works if THIS application lists http://localhost:4200/api/auth/callback under OAuth Redirect URLs.'
+            $answer = (Read-Host 'Use it? [Y = yes, N = enter a different Client ID/Secret]').Trim()
+            if ($answer -eq '' -or $answer -match '^[Yy]') {
+                Save-Config $id $plain
+                exit 0
+            }
         }
     }
 } catch {
